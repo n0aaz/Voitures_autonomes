@@ -9,18 +9,29 @@ class Neurones:
 		ainit=[[random.random() for k in range(tailles[i])]for i in range(len(tailles))]
 		self.a=np.array(ainit) 											#a[i][j] valeur du neurone j de la couche i ,
 																		#ce n'est pas une matrice , on initialise aléatoirement
-		
-		winit=[]
+		self.tailles=tailles
+		winit=np.empty(len(tailles),dtype=object)
 		for l in range(len(tailles)-1):
-			winit.append(np.random.rand(tailles[l],tailles[l+1])) 		# np.random.rand(i,j) renvoie une matrice de nombres aléatoires de taille i*j
-		
-		self.w=np.array([]) #w[L][i,j] est le poids de la connexion entre le neurone i de la couche L et le neurone j de la couche L+1
+			print(tailles[l],tailles[l+1])
+			winit[l]=(np.random.rand(tailles[l],tailles[l+1])) 		# np.random.rand(i,j) renvoie une matrice de nombres aléatoires de taille i*j
+			#print(winit)
+		self.w=np.array(winit) #w[L][i,j] est le poids de la connexion entre le neurone i de la couche L et le neurone j de la couche L+1
 		
 		self.sig=fct_activation		#on appelle sig comme sigma la fonction d'activation du réseau
 		self.sigp=drv_activation	#dérivée fournie par l'utilisateur
 		
-	def propagation(entree):
+	def propagation(self,entree):
 		self.a[0]=copy.deepcopy(entree)
-		for l in range(1,len(tailles)):
-			self.a[l]=np.dot(self.a[l-1],self.w[l]) #éventuellement introduire une matrice de biais ici
-			
+		for l in range(1,len(self.tailles)):
+			print(self.a[l-1],self.w[l])
+			self.a[l]=self.sig(np.dot(self.a[l-1],self.w[l-1])) #éventuellement introduire une matrice de biais ici
+		return self.a[-1]
+
+def sigmoide(x):
+	return 1/(1+np.exp(x))
+	
+def drv_sigmoide(x):
+	return 1/(2+np.exp(x)+np.exp(-x))
+				
+N=Neurones([2,3,4,2],sigmoide,drv_sigmoide)
+print(N.propagation(np.array([18,2])),"activ=",N.a)
