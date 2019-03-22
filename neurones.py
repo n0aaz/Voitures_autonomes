@@ -12,7 +12,7 @@ circuit[55][50]=1
 for k in range(1000):
 	xx,yy=random.randrange(0,1000),random.randrange(0,1000)
 	circuit[xx][yy]=1
-	plt.plot(xx,yy)
+	plt.plot(xx,yy,marker='o',markersize=4)
 
 class Neurones:
 	
@@ -52,13 +52,13 @@ class Vehicules:
 		self.vmax=20
 		self.vitesse=0.0
 		self.angle=0.0
-		self.reseau=Neurones([3,3,4,2],sigmoide,drv_sigmoide)
+		self.reseau=Neurones([5,4,3,2],sigmoide,drv_sigmoide)#modifier le premier coefficient de la liste en raccord avec le nombre de sorties de detect_entree
 		self.distance=0.0
 		self.vivant=True
 		
-	def detect_entree(self,dmax):
-		distances=[0.0,0.0,0.0]
-		angles=[i*np.pi/4 for i in range(-1,2)]
+	def detect_entree(self,dmax,nbangles):
+		distances=[i*0.0 for i in range (nbangles)]
+		angles=[i*np.pi/nbangles for i in range(-int((nbangles)/2),int((nbangles)/2))] #modifier ici les angles
 		
 		for i in range(len(angles)):
 			x,y=self.position
@@ -67,26 +67,25 @@ class Vehicules:
 				if x>0 and x<xmax and y>0 and y<ymax and not circuit[int(x)][int(y)]:
 					x+=np.cos(self.angle+angles[i])
 					y+=np.sin(self.angle+angles[i])
-				else :
 					distances[i]=k/dmax
-			distances[i]=1.0
-		return np.array([gauche,centre,droite])
+				
+		return np.array(distances)
 	
 	def deplacement(self):
 		if self.vivant:
-			entree=self.detect_entree(10)
+			entree=self.detect_entree(10,5)
 			x,y=self.position
 			resultat_reseau = self.reseau.propagation(entree)
 			#print("res=",resultat_reseau)
 			self.vitesse,self.angle= (resultat_reseau[0]+1)*self.vmax/2 , (resultat_reseau[1])*np.pi
 			dx,dy=int(self.vitesse*dt*np.cos(self.angle)) , int(self.vitesse*dt*np.sin(self.angle))
 			#print("d=",dx,dy)
-			self.position= x+dx,y+dy
 			
-			if circuit[self.position[0]][self.position[1]]:
+			if x<0 or x>=xmax or y<0 or y>=ymax or circuit[x][y]:
 				self.vivant=False
 			else:
 				self.distance+=np.sqrt(dx**2+dy**2)
+				self.position= x+dx,y+dy
 				
 	def mort(self):
 		return not self.vivant
@@ -94,15 +93,15 @@ class Vehicules:
 		
 #N=Neurones([2,3,4,2],sigmoide,drv_sigmoide)
 #print("resultat de la propagation",N.propagation(np.array([18,2])),"activations=",N.a)
-la_horde=[Vehicules((50,50))for i in range(50)]
+la_horde=[Vehicules((50,50))for i in range(30)]
 
 
 for vuatur in la_horde:
 	positions=[vuatur.position]
-	for k in range(1500):
-		if vuatur.mort() :
-			la_horde.remove(vuatur)
-		else:
+	for k in range(800):
+		#if vuatur.mort() :
+		#	la_horde.remove(vuatur)
+		#else:
 			vuatur.deplacement()
 			#print(vuatur.reseau.w)
 			positions.append(vuatur.position)
