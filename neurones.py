@@ -94,20 +94,25 @@ class Vehicules:
 #N=Neurones([2,3,4,2],sigmoide,drv_sigmoide)
 #print("resultat de la propagation",N.propagation(np.array([18,2])),"activations=",N.a)
 la_horde=[Vehicules((50,50))for i in range(30)]
+nbvoit_vivantes=len(la_horde)
+distances_par_vehicule=[]
 
-
-for vuatur in la_horde:
+for k in range(len(la_horde)):
+	vuatur=la_horde[k]
 	positions=[vuatur.position]
-	for k in range(800):
-		#if vuatur.mort() :
-		#	la_horde.remove(vuatur)
-		#else:
+	while nbvoit_vivantes>0 and not vuatur.mort():
+		if vuatur.mort() :
+			nbvoit_vivantes-=1
+		else:
 			vuatur.deplacement()
 			#print(vuatur.reseau.w)
-			positions.append(vuatur.position)
-			#print(vuatur.distance)
+		positions.append(vuatur.position)
+		#print(vuatur.distance)
+	
+	distances_par_vehicule.append((vuatur.distance,k))
 	x_val = [x[0] for x in positions]
 	y_val = [x[1] for x in positions]
 	plt.plot(x_val,y_val)
+print(sorted(distances_par_vehicule)[-5:])
 plt.show()
 
