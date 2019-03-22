@@ -90,29 +90,31 @@ class Vehicules:
 	def mort(self):
 		return not self.vivant
 		
-		
-#N=Neurones([2,3,4,2],sigmoide,drv_sigmoide)
-#print("resultat de la propagation",N.propagation(np.array([18,2])),"activations=",N.a)
-la_horde=[Vehicules((50,50))for i in range(30)]
-nbvoit_vivantes=len(la_horde)
-distances_par_vehicule=[]
 
-for k in range(len(la_horde)):
-	vuatur=la_horde[k]
-	positions=[vuatur.position]
-	while nbvoit_vivantes>0 and not vuatur.mort():
-		if vuatur.mort() :
-			nbvoit_vivantes-=1
-		else:
-			vuatur.deplacement()
-			#print(vuatur.reseau.w)
-		positions.append(vuatur.position)
-		#print(vuatur.distance)
+def generation(nb_individus,nb_meilleurs):		
+	#N=Neurones([2,3,4,2],sigmoide,drv_sigmoide)
+	#print("resultat de la propagation",N.propagation(np.array([18,2])),"activations=",N.a)
+	la_horde=[Vehicules((50,50))for i in range(nb_individus)]
+	nbvoit_vivantes=len(la_horde)
+	distances_par_vehicule=[]
 	
-	distances_par_vehicule.append((vuatur.distance,k))
-	x_val = [x[0] for x in positions]
-	y_val = [x[1] for x in positions]
-	plt.plot(x_val,y_val)
-print(sorted(distances_par_vehicule)[-5:])
-plt.show()
+	for k in range(len(la_horde)):
+		vuatur=la_horde[k]
+		positions=[vuatur.position]
+		while nbvoit_vivantes>0 and not vuatur.mort():
+			if vuatur.mort() :
+				nbvoit_vivantes-=1
+			else:
+				vuatur.deplacement()
+				#print(vuatur.reseau.w)
+			positions.append(vuatur.position)
+			#print(vuatur.distance)
+		
+		distances_par_vehicule.append((vuatur.distance,k))
+		x_val = [x[0] for x in positions]
+		y_val = [x[1] for x in positions]
+		plt.plot(x_val,y_val)
+	print(sorted(distances_par_vehicule)[-nb_meilleurs:])
+	plt.show()
 
+generation(10,3)
