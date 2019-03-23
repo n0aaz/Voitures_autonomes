@@ -3,6 +3,8 @@ import numpy as np
 import copy
 import imageio
 import matplotlib.pyplot as plt
+from multiprocessing import Process #multiprocessing permet de paralléliser les tâches , deja teste avec threading bien moins efficace
+import time
 
 
 dt=1/5
@@ -113,8 +115,73 @@ def generation(nb_individus,nb_meilleurs):
 		distances_par_vehicule.append((vuatur.distance,k))
 		x_val = [x[0] for x in positions]
 		y_val = [x[1] for x in positions]
-		plt.plot(x_val,y_val)
+		#plt.plot(x_val,y_val)
 	print(sorted(distances_par_vehicule)[-nb_meilleurs:])
-	plt.show()
+	#plt.show()
+	
+class Generation_parallele(Process):
+	def __init__(self,nb_individus,nb_meilleurs):
+		Process.__init__(self)
+		self.nb_individus = nb_individus
+		self.nb_meilleurs = nb_meilleurs
+		self.individus= []
+		self.distances=[]
+		self.pos_x, self.pos_y=[],[]
 
-generation(10,3)
+	def run(self):
+		nb_individus=self.nb_individus
+		nb_meilleurs=self.nb_meilleurs
+		
+		#N=Neurones([2,3,4,2],sigmoide,drv_sigmoide)
+		#print("resultat de la propagation",N.propagation(np.array([18,2])),"activations=",N.a)
+		la_horde=[Vehicules((50,50))for i in range(nb_individus)]
+		nbvoit_vivantes=len(la_horde)
+		distances_par_vehicule=[]
+		
+		for k in range(len(la_horde)):
+			vuatur=la_horde[k]
+			positions=[vuatur.position]
+			while nbvoit_vivantes>0 and not vuatur.mort():
+				if vuatur.mort() :
+					nbvoit_vivantes-=1
+				else:
+					vuatur.deplacement()
+					#print(vuatur.reseau.w)
+				positions.append(vuatur.position)
+				#print(vuatur.distance)
+			
+			distances_par_vehicule.append((vuatur.distance,k))
+			self.pos_x.append([x[0] for x in positions])
+			self.pos_y.append([x[1] for x in positions])
+		self.distances=distances_par_vehicule
+		#plt.plot(x_val,y_val)
+		#print(sorted(distances_par_vehicule)[-nb_meilleurs:])
+		#plt.show()
+
+def generation_multithread(nbindividus,nbthreads):
+	threads=[Generation_parallele(nbindividus,5) for k in range(nbthreads)]
+	for thread in threads:
+		thread.start()
+	
+	for thread in threads:
+		thread.join()
+	"""for thread in threads:
+		for k in range(len(thread.pos_x)):
+			plt.plot(thread.pos_x[k],thread.pos_y[k])
+	plt.show()"""
+	
+#generation(10,3)
+debut_tps=time.time()
+generation_multithread(40,3)
+print(time.time()-debut_tps)
+debut_tps=time.time()
+generation(120,5)
+print(time.time()-debut_tps)
+"""ordres de grandeur de l'interet de la parallelisation:
+Processeur: i5-2520m 
+120 individus
+Programme classique: 9.26s
+Programme parallele: 5.05s
+"""
+
+#print(thread1.distances,'\n',thread2.distances,'\n',thread3.distances,'\n',thread4.distances,'\n',)
