@@ -33,13 +33,20 @@ class Neurones:
 		
 		self.sig=fct_activation		#on appelle sig comme sigma la fonction d'activation du réseau
 		self.sigp=drv_activation	#dérivée fournie par l'utilisateur
+		self.memo={}	#memoisation pour ameliorer les performances
 		
 	def propagation(self,entree):
-		self.a[0]=copy.deepcopy(entree)
-		for l in range(1,len(self.tailles)):
-			#print(self.a[l-1],self.w[l])
-			self.a[l]=self.sig(np.dot(self.a[l-1],self.w[l-1])) #éventuellement introduire une matrice de biais ici
-		return self.a[-1]
+		if tuple(entree) not in self.memo: #si la valeur du calcul n'est pas connue on la calcule
+			"""Attention: l'entree sera une liste/un tableau ne pouvant pas etre utilise comme cle de dictionnaire
+			c'est pourquoi il faut le transformer d'abord en tuple"""
+			self.a[0]=copy.deepcopy(entree)
+			for l in range(1,len(self.tailles)):
+				#print(self.a[l-1],self.w[l])
+				self.a[l]=self.sig(np.dot(self.a[l-1],self.w[l-1])) #éventuellement introduire une matrice de biais ici
+			self.memo[tuple(entree)]=self.a[-1] #on ajoute la valeur calculee au dictionnaire pour une eventuelle utilisation future 
+			return self.a[-1]
+		else:
+			return self.memo[tuple(entree)]
 		
 
 def sigmoide(x):
