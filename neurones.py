@@ -119,16 +119,17 @@ def generation(nb_individus,nb_meilleurs):
 	print(sorted(distances_par_vehicule)[-nb_meilleurs:])
 	#plt.show()
 	
-class Generation_parallele(Process):
+class Generation_parallele(Process): #necessite de creer une sous classe de Process pour la parallelisation
 	def __init__(self,nb_individus,nb_meilleurs):
 		Process.__init__(self)
-		self.nb_individus = nb_individus
+		self.nb_individus = nb_individus 
 		self.nb_meilleurs = nb_meilleurs
 		self.individus= []
 		self.distances=[]
 		self.pos_x, self.pos_y=[],[]
 
-	def run(self):
+	def run(self): #limitations de Process: run() effectue la tache du programme mais ne doit rien retourner
+					# c'est pourquoi on utilise une classe dans laquelle on va modifier des propriétés
 		nb_individus=self.nb_individus
 		nb_meilleurs=self.nb_meilleurs
 		
@@ -183,5 +184,3 @@ Processeur: i5-2520m
 Programme classique: 9.26s
 Programme parallele: 5.05s
 """
-
-#print(thread1.distances,'\n',thread2.distances,'\n',thread3.distances,'\n',thread4.distances,'\n',)
