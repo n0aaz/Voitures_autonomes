@@ -67,19 +67,19 @@ class Vehicules:
 		self.vivant=True
 		
 	def detect_entree(self,dmax,nbangles):
-		distances=[i*0.0 for i in range (nbangles)]
-		angles=[i*np.pi/nbangles for i in range(-int((nbangles)/2),int((nbangles)/2))] #modifier ici les angles
+		distances=[i*0.0 for i in range (nbangles)] #tableau qui contiendra la distance à un obstacle POUR CHAQUE ANGLE
+		angles=[i*np.pi/nbangles for i in range(-int((nbangles)/2),int((nbangles)/2))] #tableau des angles d'observation 
 		
-		for i in range(len(angles)):
-			x,y=self.position
-			d=0 
-			for k in range(dmax):
-				if x>0 and x<xmax and y>0 and y<ymax and not circuit[int(x)][int(y)]:
-					x+=np.cos(self.angle+angles[i])
-					y+=np.sin(self.angle+angles[i])
-					distances[i]=k/dmax
+		for i in range(len(angles)): #on fixe un angle d'observation , on va regarder dans cette direction
+			x,y=self.position		#on copie la position actuelle du véhicule
+			for k in range(dmax):	#on itere jusqu'a dmax
+				if x>0 and x<xmax and y>0 and y<ymax and not circuit[int(x)][int(y)]: #conditions a laquelle on continue de regarder dans la direction choisie
+																					# en gros tant qu'il n'y a pas d'obstacle ou qu'on ne tombe pas sur un mur
+					x+=np.cos(self.angle+angles[i])		# x devient x+ projection selon x dans la direction choisie
+					y+=np.sin(self.angle+angles[i])		# y devient y+ projection selon y dans la direction choisie
+					distances[i]=k/dmax					# la distance pour l'angle d'observation choisi devient k/dmax pour avoir un quotient entre 0 et 1
 				
-		return np.array(distances)
+		return np.array(distances) #on convertit en tableau numpy pour que la fonction de propagation puisse calculer rapidement dessus
 	
 	def deplacement(self):
 		if self.vivant:
