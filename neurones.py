@@ -4,7 +4,7 @@ import copy
 import imageio
 import matplotlib.pyplot as plt
 from multiprocessing import Process #multiprocessing permet de paralléliser les tâches , deja teste avec threading bien moins efficace
-import Array
+#import Array
 import time
 
 
@@ -31,7 +31,7 @@ class Neurones:
 			winit[l]=((np.random.rand(tailles[l],tailles[l+1])))*2-1 		# np.random.rand(i,j) renvoie une matrice de nombres aléatoires entre 0 et 1 de taille i*j 
 			#print(winit)            le *2-1 permet de ramener les valeurs entre -1 et 1 
 		self.w=np.array(winit) #w[L][i,j] est le poids de la connexion entre le neurone i de la couche L et le neurone j de la couche L+1
-		
+		#print(np.max(self.w[1]))
 		self.sig=fct_activation		#on appelle sig comme sigma la fonction d'activation du réseau
 		self.sigp=drv_activation	#dérivée fournie par l'utilisateur
 		self.memo={}	#memoisation pour ameliorer les performances
@@ -49,9 +49,61 @@ class Neurones:
 		else:
 			return self.memo[tuple(entree)]
 		
+		
+def mutation(individu,nbmutat):
+	for i in range(nbmutat): #on va modifier aléatoirement plusieurs poids du reseau neuronal de l'individu
+		couche_random=random.randint(0,len(individu.reseau.w)-2)
+		#print('len',len(individu.reseau.w)-1)
+		#print('couche',couche_random)
+		#print('poids',individu.reseau.w[couche_random])
+		#print('type',type(individu.reseau.w[couche_random]))
+		i_random=random.randint(0,len(individu.reseau.w[couche_random])-1)
+		j_random=random.randint(0,len(individu.reseau.w[couche_random][i_random])-1)
+		individu.reseau.w[couche_random][i_random,j_random]=random.random()*2-1
 
+def reproduction(pere,mere):
+	enfant=Vehicules((50,50))
+	for i in range(len(enfant.reseau.w)): #l'enfant hérite d'une couche sur deux de chaque parent
+		if (-1)**i >0 :
+			enfant.reseau.w[i]=copy.deepcopy(pere.reseau.w[i])
+		else:
+			enfant.reseau.w[i]=copy.deepcopy(mere.reseau.w[i])
+	return enfant
+	
+		
+def evolution(individus,distances):
+	distance_moyenne=sum(distances)/len(distances)
+	variance=sum([d**2-distance_moyenne**2 for d in distances])/len(distances)
+	print('moy=',distance_moyenne,'\n variance=',variance)
+	indices_tries=np.argsort(distances) #argsort renvoie une liste contenant les indices des elements tries par ordre croissant sans modifier la liste
+	individus_tries=[individus[k] for k in indices_tries] #les individus sont ici mis dans l'ordre croissant
+	taux_mutation=0.1
+	taux_meilleurs=0.2 #proportion des meilleurs individus conservés pour la génération suivante
+	taux_sauvetage=0.05 #chances qu'un "mauvais" individu soit conservé
+	
+	#on prend les meilleurs individus
+	nombre_meilleurs=int(taux_meilleurs*len(individus_tries))
+	parents=individus_tries[nombre_meilleurs:]
+	
+	#on ajoute quelques individus moins bons au hasard pour la diversité
+	for k in range(len(individus_tries[:nombre_meilleurs])):
+		if random.random() < taux_sauvetage:
+			parents.append(individus_tries[k])
+			
+	enfants=[]
+			
+	#on fait muter quelques parents au hasard
+	for k in range(len(parents)):
+		if random.random() < taux_mutation:
+			mutation(parents[k],3)
+	
+	while len(enfants)<len(individus):
+		enfants.append(reproduction(random.choice(parents),random.choice(parents)))
+	
+	return enfants
+	
 def sigmoide(x):
-	return 1/(1+np.exp(x))
+	return 1/(1+np.exp(-x))
 	
 def drv_sigmoide(x):
 	return 1/(2+np.exp(x)+np.exp(-x))
@@ -101,10 +153,10 @@ class Vehicules:
 		return not self.vivant
 		
 
-def generation(nb_individus,nb_meilleurs):		
+def generation(la_horde,nb_individus,tracer):		
 	#N=Neurones([2,3,4,2],sigmoide,drv_sigmoide)
 	#print("resultat de la propagation",N.propagation(np.array([18,2])),"activations=",N.a)
-	la_horde=[Vehicules((50,50))for i in range(nb_individus)]
+	#la_horde=[Vehicules((50,50))for i in range(nb_individus)]
 	nbvoit_vivantes=len(la_horde)
 	distances_par_vehicule=[]
 	
@@ -120,11 +172,13 @@ def generation(nb_individus,nb_meilleurs):
 			positions.append(vuatur.position)
 			#print(vuatur.distance)
 		
-		distances_par_vehicule.append((vuatur.distance,k))
+		distances_par_vehicule.append(vuatur.distance)
 		x_val = [x[0] for x in positions]
 		y_val = [x[1] for x in positions]
-		#plt.plot(x_val,y_val)
-	print(sorted(distances_par_vehicule)[-nb_meilleurs:])
+		if tracer:
+			plt.plot(x_val,y_val)
+	#(sorted(distances_par_vehicule)[-nb_meilleurs:])
+	return la_horde,distances_par_vehicule,[x_val,y_val]
 	#plt.show()
 	
 class Generation_parallele(Process): #necessite de creer une sous classe de Process pour la parallelisation
@@ -185,11 +239,27 @@ def generation_multithread(nbindividus,nbthreads):
 	plt.show()"""
 	
 #generation(10,3)
-debut_tps=time.time()
-generation_multithread(40,3)
-print(time.time()-debut_tps)
 #debut_tps=time.time()
-#generation(120,5)
+#generation_multithread(40,3)
+#print(time.time()-debut_tps)
+debut_tps=time.time()
+nbind=30
+nbgen=10
+individus,distances,plot= generation([Vehicules((50,50))for i in range(nbind)],nbind,5)
+print(time.time()-debut_tps)
+drap=False
+for k in range(nbgen):
+	if k==nbgen-1:
+		drap=True
+	debut_tps=time.time()
+	new_gen=evolution(individus,distances)
+	individus,distances,plot=generation(new_gen,nbind,drap)
+	print(time.time()-debut_tps)
+#plt.plot(plot[0],plot[1])
+plt.show()
+
+#debut_tps=time.time()
+#generation(new_gen,40,5)
 #print(time.time()-debut_tps)
 """ordres de grandeur de l'interet de la parallelisation:
 Processeur: i5-2520m 
