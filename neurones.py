@@ -7,28 +7,37 @@ from multiprocessing import Process #multiprocessing permet de paralléliser les
 #import Array
 import time
 
+def generer_circuit(image):
+	img=imageio.imread(image)
+	matrice=[[pixel[0]<10 for pixel in ligne] for ligne in img]
+	plt.imshow(matrice)
+	return matrice
 
-dt=1/5
-xmax,ymax=1000,1000
-circuit=np.zeros((xmax,ymax))
-circuit[55][50]=1
-for k in range(1000):
-	xx,yy=random.randrange(0,1000),random.randrange(0,1000)
-	circuit[xx][yy]=1
-	plt.plot(xx,yy,marker='o',markersize=4)
+circuit=generer_circuit('circuit3.png')
+#imageio.imwrite('test_circ.png',np.array(circuit))
+#print(np.array(circuit[13:85][:100]))
+position_initiale=(250,250)
+dt=1/3
+xmax,ymax=np.shape(circuit)
+#circuit=np.zeros((xmax,ymax))
+#circuit[55][50]=1
+#for k in range(1000):
+#	xx,yy=random.randrange(0,1000),random.randrange(0,1000)
+#	circuit[xx][yy]=1
+#	plt.plot(xx,yy,marker='o',markersize=4)
 
 class Neurones:
 	
 	def __init__( self , tailles, fct_activation, drv_activation):
 		
-		ainit=[[random.random() for k in range(tailles[i])]for i in range(len(tailles))] # *2-1 pour ramener sur [-1;1]
+		ainit=[[random.random() for k in range(tailles[i])]for i in range(len(tailles))] 
 		self.a=np.array(ainit) 											#a[i][j] valeur du neurone j de la couche i ,
 																		#ce n'est pas une matrice , on initialise aléatoirement
 		self.tailles=tailles
 		winit=np.empty(len(tailles),dtype=object)	#On initialise le tableau des poids , pour L couches , elle contient L matrices de poids entre la couche L+1 et L
 		for l in range(len(tailles)-1):
 			#print(tailles[l],tailles[l+1])
-			winit[l]=((np.random.rand(tailles[l],tailles[l+1])))*2-1 		# np.random.rand(i,j) renvoie une matrice de nombres aléatoires entre 0 et 1 de taille i*j 
+			winit[l]=((np.random.rand(tailles[l],tailles[l+1])))*2-1		# np.random.rand(i,j) renvoie une matrice de nombres aléatoires entre 0 et 1 de taille i*j 
 			#print(winit)            le *2-1 permet de ramener les valeurs entre -1 et 1 
 		self.w=np.array(winit) #w[L][i,j] est le poids de la connexion entre le neurone i de la couche L et le neurone j de la couche L+1
 		#print(np.max(self.w[1]))
@@ -59,10 +68,11 @@ def mutation(individu,nbmutat):
 		#print('type',type(individu.reseau.w[couche_random]))
 		i_random=random.randint(0,len(individu.reseau.w[couche_random])-1)
 		j_random=random.randint(0,len(individu.reseau.w[couche_random][i_random])-1)
-		individu.reseau.w[couche_random][i_random,j_random]=random.random()*2-1
+		individu.reseau.w[couche_random][i_random,j_random]=min(individu.reseau.w[couche_random][i_random,j_random] + random.uniform(-1,1)/5,1)
+		
 
 def reproduction(pere,mere):
-	enfant=Vehicules((50,50))
+	enfant=Vehicules(position_initiale)
 	for i in range(len(enfant.reseau.w)): #l'enfant hérite d'une couche sur deux de chaque parent
 		if (-1)**i >0 :
 			enfant.reseau.w[i]=copy.deepcopy(pere.reseau.w[i])
@@ -112,8 +122,8 @@ class Vehicules:
 	def __init__(self,position):
 		self.position=position
 		self.vmax=20
-		self.vitesse=0.0
-		self.angle=0.0
+		self.vitesse=1
+		self.angle=random.random()*2*np.pi
 		self.reseau=Neurones([5,4,3,2],sigmoide,drv_sigmoide)#modifier le premier coefficient de la liste en raccord avec le nombre de sorties de detect_entree
 		self.distance=0.0
 		self.vivant=True
@@ -125,7 +135,7 @@ class Vehicules:
 		for i in range(len(angles)): #on fixe un angle d'observation , on va regarder dans cette direction
 			x,y=self.position		#on copie la position actuelle du véhicule
 			for k in range(dmax):	#on itere jusqu'a dmax
-				if x>0 and x<xmax and y>0 and y<ymax and not circuit[int(x)][int(y)]: #conditions a laquelle on continue de regarder dans la direction choisie
+				if x>=0 and x<xmax and y>=0 and y<ymax and not circuit[int(x)][int(y)]: #conditions a laquelle on continue de regarder dans la direction choisie
 																					# en gros tant qu'il n'y a pas d'obstacle ou qu'on ne tombe pas sur un mur
 					x+=np.cos(self.angle+angles[i])		# x devient x+ projection selon x dans la direction choisie
 					y+=np.sin(self.angle+angles[i])		# y devient y+ projection selon y dans la direction choisie
@@ -139,24 +149,19 @@ class Vehicules:
 			x,y=self.position
 			resultat_reseau = self.reseau.propagation(entree)
 			#print("res=",resultat_reseau)
-			self.vitesse,self.angle= (resultat_reseau[0]+1)*self.vmax/2 , (resultat_reseau[1])*np.pi
+			self.vitesse,self.angle= (resultat_reseau[0])*self.vmax , (resultat_reseau[1])*4*np.pi #etrangement l'angle ne parcourt une totalite de cercle qu'avec 4*pi
 			dx,dy=int(self.vitesse*dt*np.cos(self.angle)) , int(self.vitesse*dt*np.sin(self.angle))
 			#print("d=",dx,dy)
-			
 			if x<0 or x>=xmax or y<0 or y>=ymax or circuit[x][y]:
 				self.vivant=False
 			else:
 				self.distance+=np.sqrt(dx**2+dy**2)
 				self.position= x+dx,y+dy
-				
 	def mort(self):
 		return not self.vivant
 		
 
 def generation(la_horde,nb_individus,tracer):		
-	#N=Neurones([2,3,4,2],sigmoide,drv_sigmoide)
-	#print("resultat de la propagation",N.propagation(np.array([18,2])),"activations=",N.a)
-	#la_horde=[Vehicules((50,50))for i in range(nb_individus)]
 	nbvoit_vivantes=len(la_horde)
 	distances_par_vehicule=[]
 	
@@ -176,7 +181,7 @@ def generation(la_horde,nb_individus,tracer):
 		x_val = [x[0] for x in positions]
 		y_val = [x[1] for x in positions]
 		if tracer:
-			plt.plot(x_val,y_val)
+			plt.plot(x_val,y_val,marker='o')
 	#(sorted(distances_par_vehicule)[-nb_meilleurs:])
 	return la_horde,distances_par_vehicule,[x_val,y_val]
 	#plt.show()
@@ -196,7 +201,7 @@ class Generation_parallele(Process): #necessite de creer une sous classe de Proc
 		
 		#N=Neurones([2,3,4,2],sigmoide,drv_sigmoide)
 		#print("resultat de la propagation",N.propagation(np.array([18,2])),"activations=",N.a)
-		la_horde=[Vehicules((50,50))for i in range(nb_individus)]
+		la_horde=[Vehicules(position_initiale)for i in range(nb_individus)]
 		nbvoit_vivantes=len(la_horde)
 		
 		for k in range(len(la_horde)):
@@ -243,9 +248,9 @@ def generation_multithread(nbindividus,nbthreads):
 #generation_multithread(40,3)
 #print(time.time()-debut_tps)
 debut_tps=time.time()
-nbind=30
-nbgen=10
-individus,distances,plot= generation([Vehicules((50,50))for i in range(nbind)],nbind,5)
+nbind=40
+nbgen=1
+individus,distances,plot= generation([Vehicules(position_initiale)for i in range(nbind)],nbind,5)
 print(time.time()-debut_tps)
 drap=False
 for k in range(nbgen):
@@ -256,6 +261,7 @@ for k in range(nbgen):
 	individus,distances,plot=generation(new_gen,nbind,drap)
 	print(time.time()-debut_tps)
 #plt.plot(plot[0],plot[1])
+plt.grid(True)
 plt.show()
 
 #debut_tps=time.time()
