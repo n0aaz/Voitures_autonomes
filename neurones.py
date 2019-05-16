@@ -13,10 +13,16 @@ def generer_circuit(image):
 	plt.imshow(np.transpose(matrice))
 	return matrice
 
+global no_generation
+no_generation =0 
+normalisation_poids=1
+angles_vision=3
+distance_vision=12
+
 circuit=generer_circuit('circuit6.png')
 #imageio.imwrite('test_circ.png',np.array(circuit))
 #print(np.array(circuit[13:85][:100]))
-position_initiale=(80,60)
+position_initiale=(60,60)
 dt=1/2
 xmax,ymax=np.shape(circuit)
 #circuit=np.zeros((xmax,ymax))
@@ -37,8 +43,8 @@ class Neurones:
 		winit=np.empty(len(tailles),dtype=object)	#On initialise le tableau des poids , pour L couches , elle contient L matrices de poids entre la couche L+1 et L
 		for l in range(len(tailles)-1):
 			#print(tailles[l],tailles[l+1])
-			winit[l]=2*((np.random.rand(tailles[l],tailles[l+1])))-1		# np.random.rand(i,j) renvoie une matrice de nombres aléatoires entre 0 et 1 de taille i*j 
-			#print(winit)            le *2-1 permet de ramener les valeurs entre -1 et 1 
+			winit[l]=((np.random.rand(tailles[l],tailles[l+1]))-0.5)*normalisation_poids		# np.random.rand(i,j) renvoie une matrice de nombres aléatoires entre 0 et 1 de taille i*j 
+			#print(winit)            #le *2-1 permet de ramener les valeurs entre -1 et 1 
 		self.w=np.array(winit) #w[L][i,j] est le poids de la connexion entre le neurone i de la couche L et le neurone j de la couche L+1
 		#print(np.max(self.w[1]))
 		self.sig=fct_activation		#on appelle sig comme sigma la fonction d'activation du réseau
@@ -68,16 +74,25 @@ def mutation(individu,nbmutat):
 		#print('type',type(individu.reseau.w[couche_random]))
 		i_random=random.randint(0,len(individu.reseau.w[couche_random])-1)
 		j_random=random.randint(0,len(individu.reseau.w[couche_random][i_random])-1)
-		individu.reseau.w[couche_random][i_random,j_random]=individu.reseau.w[couche_random][i_random,j_random] + random.uniform(-1,1)/10
+		individu.reseau.w[couche_random][i_random,j_random]+= np.random.normal()*normalisation_poids*.999**no_generation #rajout d'un nombre aleatoire decroissant a chaque gen pour affiner
+		if individu.reseau.w[couche_random][i_random,j_random]>normalisation_poids:
+			individu.reseau.w[couche_random][i_random,j_random]=normalisation_poids
+		elif individu.reseau.w[couche_random][i_random,j_random]<-normalisation_poids:
+			individu.reseau.w[couche_random][i_random,j_random]=-normalisation_poids
 		
 
 def reproduction(pere,mere):
 	enfant=Vehicules(position_initiale)
-	for i in range(len(enfant.reseau.w)): #l'enfant hérite d'une couche sur deux de chaque parent
-		if (-1)**i >0 :
-			enfant.reseau.w[i]=copy.deepcopy(pere.reseau.w[i])
-		else:
-			enfant.reseau.w[i]=copy.deepcopy(mere.reseau.w[i])
+	for i in range(len(enfant.reseau.w)-1): #l'enfant hérite d'une couche sur deux de chaque parent
+		for j in range(len(enfant.reseau.w[i])):
+			if (-1)**j>0:
+				enfant.reseau.w[i][j]=copy.deepcopy(pere.reseau.w[i][j])
+			else:
+				enfant.reseau.w[i][j]=copy.deepcopy(mere.reseau.w[i][j])
+		#if (-1)**i >0 :
+		#	enfant.reseau.w[i]=copy.deepcopy(pere.reseau.w[i])
+		#else:
+		#	enfant.reseau.w[i]=copy.deepcopy(mere.reseau.w[i])
 	return enfant
 	
 		
@@ -88,8 +103,8 @@ def evolution(individus,distances):
 	indices_tries=np.argsort(distances) #argsort renvoie une liste contenant les indices des elements tries par ordre croissant sans modifier la liste
 	individus_tries=[individus[k] for k in indices_tries] #les individus sont ici mis dans l'ordre croissant
 	taux_mutation=0.1
-	taux_meilleurs=0.3 #proportion des meilleurs individus conservés pour la génération suivante
-	taux_sauvetage=0.05 #chances qu'un "mauvais" individu soit conservé
+	taux_meilleurs=0.15 #proportion des meilleurs individus conservés pour la génération suivante
+	taux_sauvetage=0.02 #chances qu'un "mauvais" individu soit conservé
 	
 	#on prend les meilleurs individus
 	nombre_meilleurs=int(taux_meilleurs*len(individus_tries))
@@ -105,7 +120,7 @@ def evolution(individus,distances):
 	#on fait muter quelques parents au hasard
 	for k in range(len(parents)):
 		if random.random() < taux_mutation:
-			mutation(parents[k],100)
+			mutation(parents[k],10)
 	
 	while len(enfants)<len(individus):
 		enfants.append(reproduction(random.choice(parents),random.choice(parents)))
@@ -121,10 +136,10 @@ def drv_sigmoide(x):
 class Vehicules: 
 	def __init__(self,position):
 		self.position=position
-		self.vmax=20
-		self.vitesse=1
+		self.vmax=37
+		self.vitesse=0
 		self.angle=0.0#random.random()*2*np.pi
-		self.reseau=Neurones([5,4,3,2],sigmoide,drv_sigmoide)#modifier le premier coefficient de la liste en raccord avec le nombre de sorties de detect_entree
+		self.reseau=Neurones([angles_vision,10,2],sigmoide,drv_sigmoide)#modifier le premier coefficient de la liste en raccord avec le nombre de sorties de detect_entree
 		self.distance=0.0
 		self.vivant=True
 		
@@ -145,7 +160,7 @@ class Vehicules:
 	
 	def deplacement(self):
 		if self.vivant:
-			entree=self.detect_entree(22,5)
+			entree=self.detect_entree(distance_vision,angles_vision)
 			#print(entree)
 			x,y=self.position
 			resultat_reseau = self.reseau.propagation(entree)
@@ -153,9 +168,11 @@ class Vehicules:
 			self.vitesse,self.angle= (resultat_reseau[0])*self.vmax , (resultat_reseau[1])*2*np.pi #etrangement l'angle ne parcourt une totalite de cercle qu'avec 4*pi
 			dx,dy=int(self.vitesse*dt*np.cos(self.angle)) , int(self.vitesse*dt*np.sin(self.angle))
 			#print("d=",dx,dy)
+			if (dx,dy)==(0,0) : #condition pour éviter les blocages, on préferera que les individus soient constamment en mouvement
+				self.vivant=False
 			if x<0 or x>=xmax or y<0 or y>=ymax:
 				self.distance -=200 #punir les individus qui rentrent dans les murs
-			if x<0 or x>=xmax or y<0 or y>=ymax or circuit[x][y]:
+			if x<0 or x>=xmax or y<0 or y>=ymax or circuit[x][y] :#or (dx,dy==0,0):
 				self.vivant=False
 				
 			else:
@@ -252,18 +269,19 @@ def generation(la_horde,nb_individus,tracer):
 #generation_multithread(40,3)
 #print(time.time()-debut_tps)
 debut_tps=time.time()
-nbind=50
-nbgen=50
+nbind=40
+nbgen=700
 individus,distances,plot= generation([Vehicules(position_initiale)for i in range(nbind)],nbind,5)
 print(time.time()-debut_tps)
 drap=False
 for k in range(nbgen):
+	no_generation=k
 	if k==nbgen-1:
 		drap=True
 	debut_tps=time.time()
 	new_gen=evolution(individus,distances)
 	individus,distances,plot=generation(new_gen,nbind,drap)
-	print(time.time()-debut_tps)
+	print('generation_numero:',no_generation,'temps=',time.time()-debut_tps)
 #plt.plot(plot[0],plot[1])
 plt.grid(True)
 plt.show()
