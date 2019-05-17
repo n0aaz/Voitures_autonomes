@@ -15,14 +15,14 @@ def generer_circuit(image):
 
 global no_generation
 no_generation =0 
-normalisation_poids=1
+normalisation_poids=7
 angles_vision=3
-distance_vision=12
+distance_vision=20
 
-circuit=generer_circuit('circuit6.png')
+circuit=generer_circuit('circuit7.png')
 #imageio.imwrite('test_circ.png',np.array(circuit))
 #print(np.array(circuit[13:85][:100]))
-position_initiale=(60,60)
+position_initiale=(50,230)
 dt=1/2
 xmax,ymax=np.shape(circuit)
 #circuit=np.zeros((xmax,ymax))
@@ -103,7 +103,7 @@ def evolution(individus,distances):
 	indices_tries=np.argsort(distances) #argsort renvoie une liste contenant les indices des elements tries par ordre croissant sans modifier la liste
 	individus_tries=[individus[k] for k in indices_tries] #les individus sont ici mis dans l'ordre croissant
 	taux_mutation=0.1
-	taux_meilleurs=0.15 #proportion des meilleurs individus conservés pour la génération suivante
+	taux_meilleurs=0.6 #proportion des meilleurs individus conservés pour la génération suivante
 	taux_sauvetage=0.02 #chances qu'un "mauvais" individu soit conservé
 	
 	#on prend les meilleurs individus
@@ -131,15 +131,15 @@ def sigmoide(x):
 	return 1/(1+np.exp(-x))
 	
 def drv_sigmoide(x):
-	return 1/(2+np.exp(x)+np.exp(-x))
+	return 1/(2+np.exp(x)+np.exp(-3*x))
 				
 class Vehicules: 
 	def __init__(self,position):
 		self.position=position
-		self.vmax=37
+		self.vmax=45
 		self.vitesse=0
 		self.angle=0.0#random.random()*2*np.pi
-		self.reseau=Neurones([angles_vision,10,2],sigmoide,drv_sigmoide)#modifier le premier coefficient de la liste en raccord avec le nombre de sorties de detect_entree
+		self.reseau=Neurones([angles_vision,8,2],sigmoide,drv_sigmoide)#modifier le premier coefficient de la liste en raccord avec le nombre de sorties de detect_entree
 		self.distance=0.0
 		self.vivant=True
 		
@@ -168,30 +168,30 @@ class Vehicules:
 			self.vitesse,self.angle= (resultat_reseau[0])*self.vmax , (resultat_reseau[1])*2*np.pi #etrangement l'angle ne parcourt une totalite de cercle qu'avec 4*pi
 			dx,dy=int(self.vitesse*dt*np.cos(self.angle)) , int(self.vitesse*dt*np.sin(self.angle))
 			#print("d=",dx,dy)
-			if (dx,dy)==(0,0) : #condition pour éviter les blocages, on préferera que les individus soient constamment en mouvement
-				self.vivant=False
 			if x<0 or x>=xmax or y<0 or y>=ymax:
 				self.distance -=200 #punir les individus qui rentrent dans les murs
-			if x<0 or x>=xmax or y<0 or y>=ymax or circuit[x][y] :#or (dx,dy==0,0):
+			if x<0 or x>=xmax or y<0 or y>=ymax or circuit[x][y] or (dx,dy)==(0,0):#condition pour éviter les blocages, on préferera que les individus soient constamment en mouvement
 				self.vivant=False
-				
 			else:
 				self.distance+=np.sqrt(dx**2+dy**2)
 				self.position= x+dx,y+dy
 	def mort(self):
 		return not self.vivant
-		
 
 def generation(la_horde,nb_individus,tracer):		
 	nbvoit_vivantes=len(la_horde)
 	distances_par_vehicule=[]
 	
+	tps=time.time() 
 	for k in range(len(la_horde)):
 		vuatur=la_horde[k]
 		positions=[vuatur.position]
 		while nbvoit_vivantes>0 and not vuatur.mort():
 			if vuatur.mort() :
 				nbvoit_vivantes-=1
+			elif (time.time()-tps)>5.0: #introduire une duree de vie limite, certains individus sont sinon capables de ne jamais mourir
+				print('je suis mort patron')
+				vuatur.vivant=False
 			else:
 				vuatur.deplacement()
 				#print(vuatur.reseau.w)
@@ -201,7 +201,7 @@ def generation(la_horde,nb_individus,tracer):
 		distances_par_vehicule.append(vuatur.distance)
 		x_val = [x[0] for x in positions]
 		y_val = [x[1] for x in positions]
-		if tracer:
+		if tracer or (time.time()-tps)>5.0:
 			plt.plot(x_val,y_val,marker='o')
 	#(sorted(distances_par_vehicule)[-nb_meilleurs:])
 	return la_horde,distances_par_vehicule,[x_val,y_val]
@@ -269,8 +269,8 @@ def generation(la_horde,nb_individus,tracer):
 #generation_multithread(40,3)
 #print(time.time()-debut_tps)
 debut_tps=time.time()
-nbind=40
-nbgen=700
+nbind=50
+nbgen=100
 individus,distances,plot= generation([Vehicules(position_initiale)for i in range(nbind)],nbind,5)
 print(time.time()-debut_tps)
 drap=False
@@ -281,6 +281,8 @@ for k in range(nbgen):
 	debut_tps=time.time()
 	new_gen=evolution(individus,distances)
 	individus,distances,plot=generation(new_gen,nbind,drap)
+	if time.time()-debut_tps>5:
+		break
 	print('generation_numero:',no_generation,'temps=',time.time()-debut_tps)
 #plt.plot(plot[0],plot[1])
 plt.grid(True)
