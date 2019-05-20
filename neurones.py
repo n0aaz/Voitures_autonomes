@@ -28,7 +28,7 @@ global no_generation
 no_generation =0
 normalisation_poids=6.57
 angles_vision=3
-distance_vision=22
+distance_vision=25
 
 circuit=generer_circuit('circuit8.png')
 #imageio.imwrite('test_circ.png',np.array(circuit))
@@ -91,26 +91,24 @@ def mutation(individu,nbmutat):
 			individu.reseau.w[couche_random][i_random,j_random]=-normalisation_poids
 		
 
-def reproduction(pere,mere):
+def reproduction(pere,mere,nb_modifs):
 	enfant=Vehicules(position_initiale)
 	choix=random.random()
 	#deux opérateurs de reproduction
 	#le premier: reproduction barycentrique
-	
-	if choix>.5:
-		for i in range(len(enfant.reseau.w)-1): 
-			for j in range(len(enfant.reseau.w[i])):
-				for k in range(len(enfant.reseau.w[i][j])):
-					enfant.reseau.w[i][j][k]=(pere.reseau.w[i][j][k]+mere.reseau.w[i][j][k])/2 #reproduction barycentrique
-	else:
+	for m in range(nb_modifs):
+		
+		i=random.choice(range(len(enfant.reseau.w)-1))
+		j=random.choice(range(len(enfant.reseau.w[i])))
+		k=random.choice(range(len(enfant.reseau.w[i][j])))
+		if choix>.5:
+			enfant.reseau.w[i][j][k]=(pere.reseau.w[i][j][k]+mere.reseau.w[i][j][k])/2 #reproduction barycentrique
+		else:
 	#le second: reproduction par copie des poids des parents
-		for i in range(len(enfant.reseau.w)-1): 
-			for j in range(len(enfant.reseau.w[i])):
-				for k in range(len(enfant.reseau.w[i][j])):
-					if (-1)**k>0:
-						enfant.reseau.w[i][j]=copy.deepcopy(pere.reseau.w[i][j]) #ici l'enfant herite d'un poids sur deux de chaque parent
-					else:
-						enfant.reseau.w[i][j]=copy.deepcopy(mere.reseau.w[i][j])
+			if (-1)**k>0:
+				enfant.reseau.w[i][j]=copy.deepcopy(pere.reseau.w[i][j]) #ici l'enfant herite d'un poids sur deux de chaque parent
+			else:
+				enfant.reseau.w[i][j]=copy.deepcopy(mere.reseau.w[i][j])
 		#if (-1)**i >0 :
 		#	enfant.reseau.w[i]=copy.deepcopy(pere.reseau.w[i])
 		#else:
@@ -145,7 +143,7 @@ def evolution(individus,distances):
 			mutation(parents[k],2)
 	
 	while len(enfants)<len(individus):
-		enfants.append(reproduction(random.choice(parents),random.choice(parents)))
+		enfants.append(reproduction(random.choice(parents),random.choice(parents),5))
 	
 	return enfants,distance_moyenne,variance
 	
