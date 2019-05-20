@@ -6,23 +6,34 @@ import matplotlib.pyplot as plt
 #from multiprocessing import Process #multiprocessing permet de paralléliser les tâches , deja teste avec threading bien moins efficace
 #import Array
 import time
+fig1, ax1 = plt.subplots()
+fig2, ax2= plt.subplots()
 
 def generer_circuit(image):
 	img=imageio.imread(image)
-	matrice=np.array([[pixel[0]<10 for pixel in ligne] for ligne in img])
-	plt.imshow(np.transpose(matrice))
+	print(len(img),len(img[0]))
+	matrice=np.zeros((len(img),len(img[0])))
+	for i in range(len(img)):
+		for j in range(len(img[0])):
+			r,g,b=tuple(img[i][j][:3])
+			if g>100 and b<10 and r<10: #prendre en compte des lignes vertes sur le circuit pour récompenser les bons individus
+				matrice[i,j]=2
+			elif r+g+b<10:
+				matrice[i,j]=1
+	print(np.shape(matrice))
+	ax1.imshow(np.transpose(matrice))
 	return matrice
 
 global no_generation
-no_generation =0 
-normalisation_poids=7
+no_generation =0
+normalisation_poids=6.5
 angles_vision=3
-distance_vision=20
+distance_vision=22
 
-circuit=generer_circuit('circuit7.png')
+circuit=generer_circuit('circuit8.png')
 #imageio.imwrite('test_circ.png',np.array(circuit))
 #print(np.array(circuit[13:85][:100]))
-position_initiale=(50,230)
+position_initiale=(730,100)
 dt=1/2
 xmax,ymax=np.shape(circuit)
 #circuit=np.zeros((xmax,ymax))
@@ -34,7 +45,7 @@ xmax,ymax=np.shape(circuit)
 
 class Neurones:
 	
-	def __init__( self , tailles, fct_activation, drv_activation):
+	def __init__( self , tailles, fct_activation):
 		
 		ainit=[[random.random() for k in range(tailles[i])]for i in range(len(tailles))] 
 		self.a=np.array(ainit) 											#a[i][j] valeur du neurone j de la couche i ,
@@ -48,7 +59,6 @@ class Neurones:
 		self.w=np.array(winit) #w[L][i,j] est le poids de la connexion entre le neurone i de la couche L et le neurone j de la couche L+1
 		#print(np.max(self.w[1]))
 		self.sig=fct_activation		#on appelle sig comme sigma la fonction d'activation du réseau
-		self.sigp=drv_activation	#dérivée fournie par l'utilisateur
 		self.memo={}	#memoisation pour ameliorer les performances
 		
 	def propagation(self,entree):
@@ -74,7 +84,7 @@ def mutation(individu,nbmutat):
 		#print('type',type(individu.reseau.w[couche_random]))
 		i_random=random.randint(0,len(individu.reseau.w[couche_random])-1)
 		j_random=random.randint(0,len(individu.reseau.w[couche_random][i_random])-1)
-		individu.reseau.w[couche_random][i_random,j_random]+= np.random.normal()*normalisation_poids*.999**no_generation #rajout d'un nombre aleatoire decroissant a chaque gen pour affiner
+		individu.reseau.w[couche_random][i_random,j_random]+= np.random.normal(scale=normalisation_poids/2)*.999**no_generation #rajout d'un nombre aleatoire decroissant a chaque gen pour affiner
 		if individu.reseau.w[couche_random][i_random,j_random]>normalisation_poids:
 			individu.reseau.w[couche_random][i_random,j_random]=normalisation_poids
 		elif individu.reseau.w[couche_random][i_random,j_random]<-normalisation_poids:
@@ -83,12 +93,24 @@ def mutation(individu,nbmutat):
 
 def reproduction(pere,mere):
 	enfant=Vehicules(position_initiale)
-	for i in range(len(enfant.reseau.w)-1): #l'enfant hérite d'une couche sur deux de chaque parent
-		for j in range(len(enfant.reseau.w[i])):
-			if (-1)**j>0:
-				enfant.reseau.w[i][j]=copy.deepcopy(pere.reseau.w[i][j])
-			else:
-				enfant.reseau.w[i][j]=copy.deepcopy(mere.reseau.w[i][j])
+	choix=random.random()
+	#deux opérateurs de reproduction
+	#le premier: reproduction barycentrique
+	
+	if choix>.5:
+		for i in range(len(enfant.reseau.w)-1): 
+			for j in range(len(enfant.reseau.w[i])):
+				for k in range(len(enfant.reseau.w[i][j])):
+					enfant.reseau.w[i][j]=(pere.reseau.w[i][j]+mere.reseau.w[i][j])/2 #reproduction barycentrique
+	else:
+	#le second: reproduction par copie des poids des parents
+		for i in range(len(enfant.reseau.w)-1): 
+			for j in range(len(enfant.reseau.w[i])):
+				for k in range(len(enfant.reseau.w[i][j])):
+					if (-1)**k>0:
+						enfant.reseau.w[i][j]=copy.deepcopy(pere.reseau.w[i][j]) #ici l'enfant herite d'un poids sur deux de chaque parent
+					else:
+						enfant.reseau.w[i][j]=copy.deepcopy(mere.reseau.w[i][j])
 		#if (-1)**i >0 :
 		#	enfant.reseau.w[i]=copy.deepcopy(pere.reseau.w[i])
 		#else:
@@ -102,9 +124,9 @@ def evolution(individus,distances):
 	print('moy=',distance_moyenne,'\n variance=',variance)
 	indices_tries=np.argsort(distances) #argsort renvoie une liste contenant les indices des elements tries par ordre croissant sans modifier la liste
 	individus_tries=[individus[k] for k in indices_tries] #les individus sont ici mis dans l'ordre croissant
-	taux_mutation=0.1
+	taux_mutation=0.2
 	taux_meilleurs=0.6 #proportion des meilleurs individus conservés pour la génération suivante
-	taux_sauvetage=0.02 #chances qu'un "mauvais" individu soit conservé
+	taux_sauvetage=0.1 #chances qu'un "mauvais" individu soit conservé
 	
 	#on prend les meilleurs individus
 	nombre_meilleurs=int(taux_meilleurs*len(individus_tries))
@@ -120,26 +142,30 @@ def evolution(individus,distances):
 	#on fait muter quelques parents au hasard
 	for k in range(len(parents)):
 		if random.random() < taux_mutation:
-			mutation(parents[k],10)
+			mutation(parents[k],2)
 	
 	while len(enfants)<len(individus):
 		enfants.append(reproduction(random.choice(parents),random.choice(parents)))
 	
-	return enfants
+	return enfants,distance_moyenne,variance
 	
 def sigmoide(x):
 	return 1/(1+np.exp(-x))
 	
+def tanh(x): #une autre fonction d'activation
+	a,b=np.exp(x),np.exp(-x)
+	return (a-b)/(a+b)
+	
 def drv_sigmoide(x):
-	return 1/(2+np.exp(x)+np.exp(-3*x))
+	return 1/(2+np.exp(x)+np.exp(-x))
 				
 class Vehicules: 
 	def __init__(self,position):
 		self.position=position
-		self.vmax=45
-		self.vitesse=0
+		self.vmax=15
+		self.vitesse=10
 		self.angle=0.0#random.random()*2*np.pi
-		self.reseau=Neurones([angles_vision,8,2],sigmoide,drv_sigmoide)#modifier le premier coefficient de la liste en raccord avec le nombre de sorties de detect_entree
+		self.reseau=Neurones([angles_vision,9,1],sigmoide)#modifier le premier coefficient de la liste en raccord avec le nombre de sorties de detect_entree
 		self.distance=0.0
 		self.vivant=True
 		
@@ -150,7 +176,7 @@ class Vehicules:
 		for i in range(len(angles)): #on fixe un angle d'observation , on va regarder dans cette direction
 			x,y=self.position		#on copie la position actuelle du véhicule
 			for k in range(dmax):	#on itere jusqu'a dmax
-				if x>=0 and x<xmax and y>=0 and y<ymax and not circuit[int(x)][int(y)]: #conditions a laquelle on continue de regarder dans la direction choisie
+				if x>=0 and x<xmax and y>=0 and y<ymax and not circuit[int(x)][int(y)]==1: #conditions a laquelle on continue de regarder dans la direction choisie
 																					# en gros tant qu'il n'y a pas d'obstacle ou qu'on ne tombe pas sur un mur
 					x+=np.cos(self.angle+angles[i])		# x devient x+ projection selon x dans la direction choisie
 					y+=np.sin(self.angle+angles[i])		# y devient y+ projection selon y dans la direction choisie
@@ -162,19 +188,27 @@ class Vehicules:
 		if self.vivant:
 			entree=self.detect_entree(distance_vision,angles_vision)
 			#print(entree)
+			
 			x,y=self.position
 			resultat_reseau = self.reseau.propagation(entree)
 			#print("res=",resultat_reseau)
-			self.vitesse,self.angle= (resultat_reseau[0])*self.vmax , (resultat_reseau[1])*2*np.pi #etrangement l'angle ne parcourt une totalite de cercle qu'avec 4*pi
+			
+			#self.vitesse,self.angle= (resultat_reseau[0])*self.vmax , (resultat_reseau[1])*np.pi*2
+			self.angle=resultat_reseau*2*np.pi
 			dx,dy=int(self.vitesse*dt*np.cos(self.angle)) , int(self.vitesse*dt*np.sin(self.angle))
 			#print("d=",dx,dy)
+			
 			if x<0 or x>=xmax or y<0 or y>=ymax:
 				self.distance -=200 #punir les individus qui rentrent dans les murs
 			if x<0 or x>=xmax or y<0 or y>=ymax or circuit[x][y] or (dx,dy)==(0,0):#condition pour éviter les blocages, on préferera que les individus soient constamment en mouvement
+				if circuit[x][y]==2:
+					self.distance+=10000
 				self.vivant=False
 			else:
-				self.distance+=np.sqrt(dx**2+dy**2)
+				#self.distance+=np.sqrt(dx**2+dy**2)
 				self.position= x+dx,y+dy
+				xinit,yinit= position_initiale
+				self.distance = np.sqrt((xinit-(x+dx))**2+(yinit-(y+dy))**2)
 	def mort(self):
 		return not self.vivant
 
@@ -202,7 +236,10 @@ def generation(la_horde,nb_individus,tracer):
 		x_val = [x[0] for x in positions]
 		y_val = [x[1] for x in positions]
 		if tracer or (time.time()-tps)>5.0:
-			plt.plot(x_val,y_val,marker='o')
+			ax1.plot(x_val,y_val,marker='o')
+			ax1.set_title("Deplacements")
+			ax1.set_xlabel("x")
+			ax1.set_ylabel("y")
 	#(sorted(distances_par_vehicule)[-nb_meilleurs:])
 	return la_horde,distances_par_vehicule,[x_val,y_val]
 	#plt.show()
@@ -270,22 +307,31 @@ def generation(la_horde,nb_individus,tracer):
 #print(time.time()-debut_tps)
 debut_tps=time.time()
 nbind=50
-nbgen=100
+nbgen=20
 individus,distances,plot= generation([Vehicules(position_initiale)for i in range(nbind)],nbind,5)
 print(time.time()-debut_tps)
 drap=False
+liste_dist=[]
+liste_var=[]
 for k in range(nbgen):
 	no_generation=k
 	if k==nbgen-1:
 		drap=True
 	debut_tps=time.time()
-	new_gen=evolution(individus,distances)
+	new_gen,dmoy,variance=evolution(individus,distances)
 	individus,distances,plot=generation(new_gen,nbind,drap)
+	liste_dist.append(dmoy)
+	liste_var.append(variance)
+	#liste_temps.append(time.time()-debut_tps)
 	if time.time()-debut_tps>5:
 		break
 	print('generation_numero:',no_generation,'temps=',time.time()-debut_tps)
 #plt.plot(plot[0],plot[1])
-plt.grid(True)
+ax1.grid(True)
+#fig2.subplot(211)
+ax2.plot(range(no_generation+1),liste_dist)
+#fig2.subplot(212)
+#ax2.plot(range(no_generation+1),liste_var)
 plt.show()
 
 #debut_tps=time.time()
