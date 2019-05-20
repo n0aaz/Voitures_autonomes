@@ -26,11 +26,11 @@ def generer_circuit(image):
 
 global no_generation
 no_generation =0
-normalisation_poids=7
+normalisation_poids=10
 angles_vision=3
 distance_vision=25
 
-circuit=generer_circuit('circuit8.png')
+circuit=generer_circuit('circuit_tebi.png')
 #imageio.imwrite('test_circ.png',np.array(circuit))
 #print(np.array(circuit[13:85][:100]))
 position_initiale=(80,500)
@@ -124,7 +124,7 @@ def evolution(individus,distances):
 	individus_tries=[individus[k] for k in indices_tries] #les individus sont ici mis dans l'ordre croissant
 	taux_mutation=0.2
 	taux_meilleurs=0.6 #proportion des meilleurs individus conservés pour la génération suivante
-	taux_sauvetage=0.1 #chances qu'un "mauvais" individu soit conservé
+	taux_sauvetage=0.05 #chances qu'un "mauvais" individu soit conservé
 	
 	#on prend les meilleurs individus
 	nombre_meilleurs=int(taux_meilleurs*len(individus_tries))
@@ -192,7 +192,8 @@ class Vehicules:
 			#print("res=",resultat_reseau)
 			
 			#self.vitesse,self.angle= (resultat_reseau[0])*self.vmax , (resultat_reseau[1])*np.pi*2
-			self.angle=resultat_reseau*2*np.pi
+			self.angle=(resultat_reseau[0]-0.5)*2*(np.pi/2)
+			
 			dx,dy=int(self.vitesse*dt*np.cos(self.angle)) , int(self.vitesse*dt*np.sin(self.angle))
 			#print("d=",dx,dy)
 			
