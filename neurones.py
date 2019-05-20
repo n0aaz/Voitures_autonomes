@@ -26,7 +26,7 @@ def generer_circuit(image):
 
 global no_generation
 no_generation =0
-normalisation_poids=6.5
+normalisation_poids=6.57
 angles_vision=3
 distance_vision=22
 
@@ -101,7 +101,7 @@ def reproduction(pere,mere):
 		for i in range(len(enfant.reseau.w)-1): 
 			for j in range(len(enfant.reseau.w[i])):
 				for k in range(len(enfant.reseau.w[i][j])):
-					enfant.reseau.w[i][j]=(pere.reseau.w[i][j]+mere.reseau.w[i][j])/2 #reproduction barycentrique
+					enfant.reseau.w[i][j][k]=(pere.reseau.w[i][j][k]+mere.reseau.w[i][j][k])/2 #reproduction barycentrique
 	else:
 	#le second: reproduction par copie des poids des parents
 		for i in range(len(enfant.reseau.w)-1): 
