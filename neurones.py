@@ -26,15 +26,15 @@ def generer_circuit(image):
 
 global no_generation
 no_generation =0
-normalisation_poids=10
+normalisation_poids=8
 angles_vision=3
-distance_vision=25
+distance_vision=20
 
-circuit=generer_circuit('circuit_tebi.png')
+circuit=generer_circuit('circuit8.png')
 #imageio.imwrite('test_circ.png',np.array(circuit))
 #print(np.array(circuit[13:85][:100]))
 position_initiale=(80,500)
-dt=1
+dt=1/2
 xmax,ymax=np.shape(circuit)
 #circuit=np.zeros((xmax,ymax))
 #circuit[55][50]=1
@@ -160,10 +160,10 @@ def drv_sigmoide(x):
 class Vehicules: 
 	def __init__(self,position):
 		self.position=position
-		self.vmax=15
-		self.vitesse=10
+		self.vmax=45
+		self.vitesse=0
 		self.angle=0.0#random.random()*2*np.pi
-		self.reseau=Neurones([angles_vision,9,1],sigmoide)#modifier le premier coefficient de la liste en raccord avec le nombre de sorties de detect_entree
+		self.reseau=Neurones([angles_vision,9,8,7,2],sigmoide)#modifier le premier coefficient de la liste en raccord avec le nombre de sorties de detect_entree
 		self.distance=0.0
 		self.vivant=True
 		
@@ -191,8 +191,7 @@ class Vehicules:
 			resultat_reseau = self.reseau.propagation(entree)
 			#print("res=",resultat_reseau)
 			
-			#self.vitesse,self.angle= (resultat_reseau[0])*self.vmax , (resultat_reseau[1])*np.pi*2
-			self.angle=(resultat_reseau[0]-0.5)*2*(np.pi/2)
+			self.vitesse,self.angle=(resultat_reseau[0])*self.vmax, (resultat_reseau[1]-0.5)*2*(np.pi/2)
 			
 			dx,dy=int(self.vitesse*dt*np.cos(self.angle)) , int(self.vitesse*dt*np.sin(self.angle))
 			#print("d=",dx,dy)
@@ -306,7 +305,7 @@ def generation(la_horde,nb_individus,tracer):
 #print(time.time()-debut_tps)
 debut_tps=time.time()
 nbind=50
-nbgen=20
+nbgen=500
 individus,distances,plot= generation([Vehicules(position_initiale)for i in range(nbind)],nbind,5)
 print(time.time()-debut_tps)
 drap=False
