@@ -26,15 +26,15 @@ def generer_circuit(image):
 
 global no_generation
 no_generation =0
-normalisation_poids=6.57
+normalisation_poids=7
 angles_vision=3
 distance_vision=25
 
 circuit=generer_circuit('circuit8.png')
 #imageio.imwrite('test_circ.png',np.array(circuit))
 #print(np.array(circuit[13:85][:100]))
-position_initiale=(730,100)
-dt=1/2
+position_initiale=(80,500)
+dt=1
 xmax,ymax=np.shape(circuit)
 #circuit=np.zeros((xmax,ymax))
 #circuit[55][50]=1
@@ -221,7 +221,7 @@ def generation(la_horde,nb_individus,tracer):
 		while nbvoit_vivantes>0 and not vuatur.mort():
 			if vuatur.mort() :
 				nbvoit_vivantes-=1
-			elif (time.time()-tps)>5.0: #introduire une duree de vie limite, certains individus sont sinon capables de ne jamais mourir
+			elif (time.time()-tps)>3.0: #introduire une duree de vie limite, certains individus sont sinon capables de ne jamais mourir
 				print('je suis mort patron')
 				vuatur.vivant=False
 			else:
@@ -233,7 +233,7 @@ def generation(la_horde,nb_individus,tracer):
 		distances_par_vehicule.append(vuatur.distance)
 		x_val = [x[0] for x in positions]
 		y_val = [x[1] for x in positions]
-		if tracer or (time.time()-tps)>5.0:
+		if tracer or (time.time()-tps)>3.0:
 			ax1.plot(x_val,y_val,marker='o')
 			ax1.set_title("Deplacements")
 			ax1.set_xlabel("x")
@@ -321,8 +321,8 @@ for k in range(nbgen):
 	liste_dist.append(dmoy)
 	liste_var.append(variance)
 	#liste_temps.append(time.time()-debut_tps)
-	if time.time()-debut_tps>5:
-		break
+	#if time.time()-debut_tps>3:
+	#	break
 	print('generation_numero:',no_generation,'temps=',time.time()-debut_tps)
 #plt.plot(plot[0],plot[1])
 ax1.grid(True)
