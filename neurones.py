@@ -1,4 +1,5 @@
 import random
+import pickle
 import numpy as np
 import copy
 import imageio
@@ -33,7 +34,8 @@ distance_vision=20
 circuit=generer_circuit('circuit8.png')
 #imageio.imwrite('test_circ.png',np.array(circuit))
 #print(np.array(circuit[13:85][:100]))
-position_initiale=(80,500)
+
+position_initiale(80,500)
 dt=1/2
 xmax,ymax=np.shape(circuit)
 #circuit=np.zeros((xmax,ymax))
@@ -93,18 +95,21 @@ def mutation(individu,nbmutat):
 			individu.reseau.w[couche_random][i_random,j_random]=-normalisation_poids
 		
 
-def reproduction(pere,mere,nb_modifs):
+def reproduction(pere,mere):
 	enfant=Vehicules(position_initiale)
+	
+	#on a deux opérateurs de reproduction choisis au hasard
 	choix=random.random()
-	#deux opérateurs de reproduction
+	#La reproduction barycentrique
 	if choix > .5 :
-		enfant.reseau.w = 0.5*(np.add(pere.reseau.w , mere.reseau.w ))
+		enfant.reseau.w = 0.5*(np.add(pere.reseau.w , mere.reseau.w )) 
+	#La reproduction par copie : l'enfant reçoit aléatoirement des poids du pere ou de la mere
 	else:
 		for i in range(	len(enfant.reseau.w)):
 			for j in range( len(enfant.reseau.w[i])):
 				for k in range(len(enfant.reseau.w[i][j])):
 					p=random.choice([pere.reseau.w[i][j][k],mere.reseau.w[i][j][k]])
-					enfant.reseau.w[i][j][k]=p #ici l'enfant herite d'un poids sur deux de chaque parent
+					enfant.reseau.w[i][j][k]=p 
 		
 	return enfant
 	
@@ -139,7 +144,7 @@ def evolution(individus,distances):
 			mutation(parents[k],4)
 	
 	while len(enfants)<len(individus):
-		enfants.append(reproduction(random.choice(parents),random.choice(parents),3))
+		enfants.append(reproduction(random.choice(parents),random.choice(parents)))
 	
 	return enfants,distance_moyenne,variance
 	
@@ -149,9 +154,6 @@ def sigmoide(x):
 def tanh(x): #une autre fonction d'activation
 	a,b=np.exp(x),np.exp(-x)
 	return (a-b)/(a+b)
-	
-def drv_sigmoide(x):
-	return 1/(2+np.exp(x)+np.exp(-x))
 				
 class Vehicules: 
 	def __init__(self,position):
@@ -202,10 +204,10 @@ class Vehicules:
 			if x<0 or x>=xmax or y<0 or y>=ymax or circuit[x][y] or (dx,dy)==(0,0) or self.distance< -3000:
 				#dx,dy==0,0 est unecondition pour éviter les blocages, 
 				#on préferera que les individus soient constamment en mouvement
-				if circuit[x][y]==2:
-					self.distance+=10000
-				else:
-					self.distance-=4000
+				#if circuit[x][y]==2:
+				#	self.distance+=10000
+				#else:
+				#	self.distance-=4000
 				self.vivant=False
 			else:
 				self.distance+=np.sqrt(dx**2+dy**2)
@@ -246,6 +248,8 @@ def generation(la_horde,nb_individus,tracer):
 			ax1.set_ylabel("y")
 	#(sorted(distances_par_vehicule)[-nb_meilleurs:])
 	return la_horde,distances_par_vehicule,[x_val,y_val]
+
+
 	#plt.show()
 	
 #class Generation_parallele(Process): #necessite de creer une sous classe de Process pour la parallelisation
@@ -309,9 +313,20 @@ def generation(la_horde,nb_individus,tracer):
 #debut_tps=time.time()
 #generation_multithread(40,3)
 #print(time.time()-debut_tps)
+
+def sauvegarde_generation(chemin,gen):
+	with open(chemin,'rb') as fichier :
+		pickle.dump(gen,fichier)
+		fichier.close()
+		
+def lecture_generation(chemin):
+	with open(chemin,'rb') as fichier:
+		individu=pickle.load(fichier)
+		print(individu)
+
 debut_tps=time.time()
 nbind=50
-nbgen=125
+nbgen=100
 individus,distances,plot= generation([Vehicules(position_initiale)for i in range(nbind)],nbind,5)
 print(time.time()-debut_tps)
 drap=False
@@ -330,6 +345,7 @@ for k in range(nbgen):
 	#if time.time()-debut_tps>3:
 	#	break
 	print('generation_numero:',no_generation,'temps=',time.time()-debut_tps)
+sauvegarde_generation('generation',individus)
 #plt.plot(plot[0],plot[1])
 ax1.grid(True)
 #fig2.subplot(211)
