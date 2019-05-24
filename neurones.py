@@ -26,7 +26,7 @@ def generer_circuit(image):
 
 global no_generation
 no_generation =0
-normalisation_poids=8
+normalisation_poids=10
 angles_vision=3
 distance_vision=20
 
@@ -51,13 +51,14 @@ class Neurones:
 		self.a=np.array(ainit) 											#a[i][j] valeur du neurone j de la couche i ,
 																		#ce n'est pas une matrice , on initialise aléatoirement
 		self.tailles=tailles
-		winit=np.empty(len(tailles),dtype=object)	#On initialise le tableau des poids , pour L couches , elle contient L matrices de poids entre la couche L+1 et L
+		winit=np.empty(len(tailles)-1,dtype=object)	#On initialise le tableau des poids , pour L couches , elle contient L matrices de poids entre la couche L+1 et L
+		
 		for l in range(len(tailles)-1):
-			#print(tailles[l],tailles[l+1])
-			winit[l]=((np.random.rand(tailles[l],tailles[l+1]))-0.5)*normalisation_poids		# np.random.rand(i,j) renvoie une matrice de nombres aléatoires entre 0 et 1 de taille i*j 
-			#print(winit)            #le *2-1 permet de ramener les valeurs entre -1 et 1 
+			
+			winit[l]=((np.random.rand(tailles[l],tailles[l+1]))-0.5)*normalisation_poids # np.random.rand(i,j) renvoie une matrice de nombres aléatoires entre 0 et 1 de taille i*j 
+		
 		self.w=np.array(winit) #w[L][i,j] est le poids de la connexion entre le neurone i de la couche L et le neurone j de la couche L+1
-		#print(np.max(self.w[1]))
+
 		self.sig=fct_activation		#on appelle sig comme sigma la fonction d'activation du réseau
 		self.memo={}	#memoisation pour ameliorer les performances
 		
@@ -77,14 +78,15 @@ class Neurones:
 		
 def mutation(individu,nbmutat):
 	for i in range(nbmutat): #on va modifier aléatoirement plusieurs poids du reseau neuronal de l'individu
-		couche_random=random.randint(0,len(individu.reseau.w)-2)
+		couche_random=random.randint(0,len(individu.reseau.w)-1)
 		#print('len',len(individu.reseau.w)-1)
 		#print('couche',couche_random)
 		#print('poids',individu.reseau.w[couche_random])
 		#print('type',type(individu.reseau.w[couche_random]))
 		i_random=random.randint(0,len(individu.reseau.w[couche_random])-1)
 		j_random=random.randint(0,len(individu.reseau.w[couche_random][i_random])-1)
-		individu.reseau.w[couche_random][i_random,j_random]+= np.random.normal(scale=normalisation_poids/2)*.999**no_generation #rajout d'un nombre aleatoire decroissant a chaque gen pour affiner
+		#rajout d'un nombre aleatoire decroissant a chaque gen pour affiner au fil des générations
+		individu.reseau.w[couche_random][i_random,j_random]+= np.random.normal(scale=normalisation_poids/2)*.999**no_generation
 		if individu.reseau.w[couche_random][i_random,j_random]>normalisation_poids:
 			individu.reseau.w[couche_random][i_random,j_random]=normalisation_poids
 		elif individu.reseau.w[couche_random][i_random,j_random]<-normalisation_poids:
@@ -95,32 +97,26 @@ def reproduction(pere,mere,nb_modifs):
 	enfant=Vehicules(position_initiale)
 	choix=random.random()
 	#deux opérateurs de reproduction
-	#le premier: reproduction barycentrique
-	for m in range(nb_modifs):
+	if choix > .5 :
+		enfant.reseau.w = 0.5*(np.add(pere.reseau.w , mere.reseau.w ))
+	else:
+		for i in range(	len(enfant.reseau.w)):
+			for j in range( len(enfant.reseau.w[i])):
+				for k in range(len(enfant.reseau.w[i][j])):
+					p=random.choice([pere.reseau.w[i][j][k],mere.reseau.w[i][j][k]])
+					enfant.reseau.w[i][j][k]=p #ici l'enfant herite d'un poids sur deux de chaque parent
 		
-		i=random.choice(range(len(enfant.reseau.w)-1))
-		j=random.choice(range(len(enfant.reseau.w[i])))
-		k=random.choice(range(len(enfant.reseau.w[i][j])))
-		if choix>.5:
-			enfant.reseau.w[i][j][k]=(pere.reseau.w[i][j][k]+mere.reseau.w[i][j][k])/2 #reproduction barycentrique
-		else:
-	#le second: reproduction par copie des poids des parents
-			if (-1)**k>0:
-				enfant.reseau.w[i][j]=copy.deepcopy(pere.reseau.w[i][j]) #ici l'enfant herite d'un poids sur deux de chaque parent
-			else:
-				enfant.reseau.w[i][j]=copy.deepcopy(mere.reseau.w[i][j])
-		#if (-1)**i >0 :
-		#	enfant.reseau.w[i]=copy.deepcopy(pere.reseau.w[i])
-		#else:
-		#	enfant.reseau.w[i]=copy.deepcopy(mere.reseau.w[i])
 	return enfant
 	
 		
 def evolution(individus,distances):
+	
 	distance_moyenne=sum(distances)/len(distances)
 	variance=sum([d**2-distance_moyenne**2 for d in distances])/len(distances)
 	print('moy=',distance_moyenne,'\n variance=',variance)
-	indices_tries=np.argsort(distances) #argsort renvoie une liste contenant les indices des elements tries par ordre croissant sans modifier la liste
+	
+	indices_tries=np.argsort(distances) 
+	#argsort renvoie une liste contenant les indices des elements tries par ordre croissant sans modifier la liste
 	individus_tries=[individus[k] for k in indices_tries] #les individus sont ici mis dans l'ordre croissant
 	taux_mutation=0.2
 	taux_meilleurs=0.6 #proportion des meilleurs individus conservés pour la génération suivante
@@ -140,10 +136,10 @@ def evolution(individus,distances):
 	#on fait muter quelques parents au hasard
 	for k in range(len(parents)):
 		if random.random() < taux_mutation:
-			mutation(parents[k],2)
+			mutation(parents[k],4)
 	
 	while len(enfants)<len(individus):
-		enfants.append(reproduction(random.choice(parents),random.choice(parents),5))
+		enfants.append(reproduction(random.choice(parents),random.choice(parents),3))
 	
 	return enfants,distance_moyenne,variance
 	
@@ -160,15 +156,17 @@ def drv_sigmoide(x):
 class Vehicules: 
 	def __init__(self,position):
 		self.position=position
-		self.vmax=45
+		#vitesse maximale du vehicule , on multipliera cette valeur par la sortie du réseau
+		self.vmax=35
 		self.vitesse=0
-		self.angle=0.0#random.random()*2*np.pi
-		self.reseau=Neurones([angles_vision,9,8,7,2],sigmoide)#modifier le premier coefficient de la liste en raccord avec le nombre de sorties de detect_entree
+		self.angle=0.0
+		self.reseau=Neurones([angles_vision,9,2],sigmoide)#modifier le premier coefficient de la liste 
+														  #en raccord avec le nombre de sorties de detect_entree
 		self.distance=0.0
 		self.vivant=True
 		
 	def detect_entree(self,dmax,nbangles):
-		distances=[i*0.0 for i in range (nbangles)] #tableau qui contiendra la distance à un obstacle POUR CHAQUE ANGLE
+		distances=[0.0 for i in range (nbangles)] #tableau qui contiendra la distance à un obstacle POUR CHAQUE ANGLE
 		angles=[i*np.pi/nbangles for i in range(-int((nbangles)/2),int((nbangles)/2))] #tableau des angles d'observation 
 		
 		for i in range(len(angles)): #on fixe un angle d'observation , on va regarder dans cette direction
@@ -184,10 +182,13 @@ class Vehicules:
 	
 	def deplacement(self):
 		if self.vivant:
+			#le véhicule "regarde" autour de lui : on veut lui donner des entrées
 			entree=self.detect_entree(distance_vision,angles_vision)
 			#print(entree)
 			
 			x,y=self.position
+			
+			#on calcule le résultat par le réseau de neurones
 			resultat_reseau = self.reseau.propagation(entree)
 			#print("res=",resultat_reseau)
 			
@@ -198,16 +199,21 @@ class Vehicules:
 			
 			if x<0 or x>=xmax or y<0 or y>=ymax:
 				self.distance -=200 #punir les individus qui rentrent dans les murs
-			if x<0 or x>=xmax or y<0 or y>=ymax or circuit[x][y] or (dx,dy)==(0,0):#condition pour éviter les blocages, on préferera que les individus soient constamment en mouvement
+			if x<0 or x>=xmax or y<0 or y>=ymax or circuit[x][y] or (dx,dy)==(0,0) or self.distance< -3000:
+				#dx,dy==0,0 est unecondition pour éviter les blocages, 
+				#on préferera que les individus soient constamment en mouvement
 				if circuit[x][y]==2:
 					self.distance+=10000
+				else:
+					self.distance-=4000
 				self.vivant=False
 			else:
-				#self.distance+=np.sqrt(dx**2+dy**2)
+				self.distance+=np.sqrt(dx**2+dy**2)
 				self.position= x+dx,y+dy
-				xinit,yinit= position_initiale
-				self.distance = np.sqrt((xinit-(x+dx))**2+(yinit-(y+dy))**2)
-	def mort(self):
+				#xinit,yinit= position_initiale
+				#self.distance = np.sqrt((xinit-(x+dx))**2+(yinit-(y+dy))**2)
+	
+	def mort(self): #servira de condition de boucle pour le programme complet
 		return not self.vivant
 
 def generation(la_horde,nb_individus,tracer):		
@@ -305,7 +311,7 @@ def generation(la_horde,nb_individus,tracer):
 #print(time.time()-debut_tps)
 debut_tps=time.time()
 nbind=50
-nbgen=500
+nbgen=125
 individus,distances,plot= generation([Vehicules(position_initiale)for i in range(nbind)],nbind,5)
 print(time.time()-debut_tps)
 drap=False
