@@ -35,7 +35,7 @@ circuit=generer_circuit('circuit8.png')
 #imageio.imwrite('test_circ.png',np.array(circuit))
 #print(np.array(circuit[13:85][:100]))
 
-position_initiale(80,500)
+position_initiale=(80,500)
 dt=1/2
 xmax,ymax=np.shape(circuit)
 #circuit=np.zeros((xmax,ymax))
