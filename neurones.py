@@ -204,10 +204,10 @@ class Vehicules:
 			if x<0 or x>=xmax or y<0 or y>=ymax or circuit[x][y] or (dx,dy)==(0,0) or self.distance< -3000:
 				#dx,dy==0,0 est unecondition pour éviter les blocages, 
 				#on préferera que les individus soient constamment en mouvement
-				#if circuit[x][y]==2:
-				#	self.distance+=10000
-				#else:
-				#	self.distance-=4000
+				if circuit[x][y]==2:
+					self.distance+=10000
+				else:
+					self.distance-=4000
 				self.vivant=False
 			else:
 				self.distance+=np.sqrt(dx**2+dy**2)
@@ -218,7 +218,7 @@ class Vehicules:
 	def mort(self): #servira de condition de boucle pour le programme complet
 		return not self.vivant
 
-def generation(la_horde,nb_individus,tracer):		
+def generation(la_horde,tracer):		
 	nbvoit_vivantes=len(la_horde)
 	distances_par_vehicule=[]
 	
@@ -315,19 +315,19 @@ def generation(la_horde,nb_individus,tracer):
 #print(time.time()-debut_tps)
 
 def sauvegarde_generation(chemin,gen):
-	with open(chemin,'rb') as fichier :
+	with open(chemin,'wb') as fichier :
 		pickle.dump(gen,fichier)
 		fichier.close()
 		
 def lecture_generation(chemin):
 	with open(chemin,'rb') as fichier:
-		individu=pickle.load(fichier)
-		print(individu)
+		generation_enreg=pickle.load(fichier)
+		return generation_enreg
 
 debut_tps=time.time()
-nbind=50
+nbind=70
 nbgen=100
-individus,distances,plot= generation([Vehicules(position_initiale)for i in range(nbind)],nbind,5)
+individus,distances,plot= generation([Vehicules(position_initiale)for i in range(nbind)],5)
 print(time.time()-debut_tps)
 drap=False
 liste_dist=[]
@@ -338,7 +338,7 @@ for k in range(nbgen):
 		drap=True
 	debut_tps=time.time()
 	new_gen,dmoy,variance=evolution(individus,distances)
-	individus,distances,plot=generation(new_gen,nbind,drap)
+	individus,distances,plot=generation(new_gen,drap)
 	liste_dist.append(dmoy)
 	liste_var.append(variance)
 	#liste_temps.append(time.time()-debut_tps)
@@ -350,6 +350,9 @@ sauvegarde_generation('generation',individus)
 ax1.grid(True)
 #fig2.subplot(211)
 ax2.plot(range(no_generation+1),liste_dist)
+ax2.set_title("Distance moyenne par génération")
+ax2.set_xlabel("Génération")
+ax2.set_ylabel("Distance moyenne (pixels)")
 #fig2.subplot(212)
 #ax2.plot(range(no_generation+1),liste_var)
 plt.show()
